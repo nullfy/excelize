@@ -101,6 +101,33 @@ func (f *File) MergeCell(sheet, hcell, vcell string) error {
 	return err
 }
 
+// MergeCellUncheck 提供的的功能同 MergeCell 一致，唯一不同是不做单元格重叠项检查
+// 鉴于单元格重叠区域检查过于耗时。 在明确知道没有单元格重叠的情况下，可以使用此方法。
+func (f *File) MergeCellUnCheck(sheet, hcell, vcell string) error {
+	rect1, err := f.areaRefToCoordinates(hcell + ":" + vcell)
+	if err != nil {
+		return err
+	}
+	// Correct the coordinate area, such correct C1:B3 to B1:C3.
+	_ = sortCoordinates(rect1)
+
+	hcell, _ = CoordinatesToCellName(rect1[0], rect1[1])
+	vcell, _ = CoordinatesToCellName(rect1[2], rect1[3])
+
+	xlsx, err := f.workSheetReader(sheet)
+	if err != nil {
+		return err
+	}
+	ref := hcell + ":" + vcell
+	if xlsx.MergeCells != nil {
+		xlsx.MergeCells.Cells = append(xlsx.MergeCells.Cells, &xlsxMergeCell{Ref: ref})
+	} else {
+		xlsx.MergeCells = &xlsxMergeCells{Cells: []*xlsxMergeCell{{Ref: ref}}}
+	}
+	xlsx.MergeCells.Count = len(xlsx.MergeCells.Cells)
+	return err
+}
+
 // UnmergeCell provides a function to unmerge a given coordinate area.
 // For example unmerge area D3:E9 on Sheet1:
 //
